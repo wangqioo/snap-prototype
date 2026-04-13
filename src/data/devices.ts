@@ -1,0 +1,38 @@
+import type { DeviceSpec } from '../types';
+
+export const DEVICES: Record<string, DeviceSpec> = {
+  mini: {
+    model: 'mini',
+    name: 'Snap Mini',
+    screenWidth: 800,
+    screenHeight: 480,
+    chip: 'RK3566',
+    cpu: '4x Cortex-A55 @1.8GHz',
+    gpu: 'Mali-G52 2EE',
+    npu: '1 TOPS',
+    ram: '1GB LPDDR4',
+    storage: '8GB eMMC',
+    screenSize: '4.3"',
+    hasCamera: false,
+    hasHDMI: false,
+    hasDualSpeakers: false,
+    price: '299',
+  },
+  pro: {
+    model: 'pro',
+    name: 'Snap Pro',
+    screenWidth: 1280,
+    screenHeight: 800,
+    chip: 'RK3576',
+    cpu: '4x A72 @2.2G + 4x A53 @1.8G',
+    gpu: 'Mali-G52 MC3',
+    npu: '6 TOPS',
+    ram: '2GB LPDDR4x',
+    storage: '32GB eMMC',
+    screenSize: '7"',
+    hasCamera: true,
+    hasHDMI: true,
+    hasDualSpeakers: true,
+    price: '499',
+  },
+};
