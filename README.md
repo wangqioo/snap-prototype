@@ -29,7 +29,9 @@ Snap 是一款面向轻量级 AI 应用场景的智能终端硬件产品，搭�
 
 ### 开机引导流程
 
-完整的首次开机体验：启动动画 → WiFi 连接 → 隐私协议 → 账号登录 → 进入桌面。每个步骤均支持跳过。
+完整的首次开机体验：启动动画 -> WiFi 连接 -> 隐私协议 -> 账号登录 -> 进入桌面。每个步骤均支持跳过。
+
+> 注：当前开发阶段默认跳过引导直接进入桌面，引导流程组件已实现，可通过修改 `DeviceContext.tsx` 中的初始 `screenView` 为 `'boot'` 来启用。
 
 ### 桌面 Launcher
 
@@ -37,9 +39,9 @@ Snap 是一款面向轻量级 AI 应用场景的智能终端硬件产品，搭�
 - **搜索栏**：支持按应用名称、描述、标签全文搜索
 - **分类筛选**：全部 / 工具 / 游戏 / 生活 / 教育 / AI 六个类别
 - **应用网格**：Mini 5 列，Pro 6 列；自动标记 Pro 专属应用和摄像头需求
-- **底部导航**：发现 / 已安装 / 设置 三个 Tab
+- **底部导航**：发现 / 已安装 / 设置 三个 Tab（"已安装" Tab 尚未实现筛选逻辑）
 
-### 预置应用（19 款）
+### 预置应用（18 款）
 
 | 应用 | 分类 | 兼容性 |
 |------|------|--------|
@@ -64,10 +66,17 @@ Snap 是一款面向轻量级 AI 应用场景的智能终端硬件产品，搭�
 
 Pro 专属应用依赖摄像头和高性能 NPU，在 Mini 上会显示兼容性提示并禁止启动。
 
+### 应用运行容器（AppViewer）
+
+- 有部署地址的应用通过 `<iframe>` 沙箱加载，支持 camera/microphone 等权限声明
+- 加载过程中显示 loading 动画，加载失败时提供"新窗口打开"的降级方案
+- 尚无部署地址的应用以 Mock 预览卡片展示（图标、描述、标签）
+- 目前仅 **AR 手势射击** 接入了真实线上地址，其余应用均为 Mock 状态
+
 ### 设置页面
 
 - 网络信息（WiFi、蓝牙、IP 地址）
-- 显示设置（亮度实时调节、自动休眠）
+- 显示设置（亮度实时调节，联动 Bridge API；自动休眠设置）
 - 音频信息（扬声器/麦克风规格随型号变化）
 - 设备信息（完整硬件参数表）
 - 响指账号管理
@@ -92,7 +101,7 @@ SnapDevice.system.getDeviceInfo()
 SnapDevice.system.getModel()       // 'mini' | 'pro'
 SnapDevice.system.getUptime()
 
-// 存储（内存级 KV）
+// 存储（内存级 KV，页面刷新后丢失）
 SnapDevice.storage.get(key)
 SnapDevice.storage.set(key, value)
 SnapDevice.storage.remove(key)
@@ -114,7 +123,7 @@ SnapDevice.npu.getTops()           // Mini: 1, Pro: 6
 ### 调试面板
 
 页面右侧提供开发者工具：
-- **Bridge 控制台**：实时记录所有 Bridge API 调用，包含时间戳、模块、方法、参数和返回值
+- **Bridge 控制台**：实时记录所有 Bridge API 调用（最多 100 条），包含时间戳、模块、方法、参数和返回值，错误调用以红色高亮
 - **设备参数表**：当前选中型号的完整硬件规格
 
 ## 技术栈
@@ -132,26 +141,41 @@ SnapDevice.npu.getTops()           // Mini: 1, Pro: 6
 
 ```
 src/
-├── main.tsx                    # 入口
-├── App.tsx                     # 根布局（设备模拟器 + 调试面板）
-├── types/index.ts              # 类型定义
+├── main.tsx                        # 入口
+├── App.tsx                         # 根布局（设备模拟器 + 调试面板）
+├── types/index.ts                  # 类型定义
 ├── data/
-│   ├── devices.ts              # 设备硬件参数
-│   └── mockApps.ts             # 应用注册表
+│   ├── devices.ts                  # 设备硬件参数
+│   └── mockApps.ts                 # 应用注册表（18 款）
 ├── bridge/
-│   ├── SnapDevice.ts           # JS Bridge 实现
-│   └── BridgeLogger.ts         # Bridge 调用日志
+│   ├── SnapDevice.ts               # JS Bridge 实现
+│   └── BridgeLogger.ts             # Bridge 调用日志（发布/订阅模式）
 ├── context/
-│   └── DeviceContext.tsx        # 全局状态管理
+│   └── DeviceContext.tsx            # 全局状态（型号、屏幕视图、亮度等）
 └── components/
-    ├── DeviceSelector.tsx       # 型号切换
-    ├── DeviceFrame.tsx          # 设备外壳渲染
-    ├── ScreenContent.tsx        # 屏幕内容路由
-    ├── Boot/                    # 开机引导（4 步）
-    ├── Launcher/                # 桌面（状态栏、搜索、分类、网格、导航）
-    ├── AppViewer/               # 应用运行容器
-    ├── Settings/                # 设置页面
-    └── Debug/                   # 调试工具（控制台 + 参数表）
+    ├── DeviceSelector.tsx           # 型号切换（Mini / Pro）
+    ├── DeviceFrame.tsx              # 设备外壳渲染
+    ├── ScreenContent.tsx            # 屏幕内容路由
+    ├── Boot/
+    │   ├── BootScreen.tsx           # 启动动画
+    │   ├── WiFiSetup.tsx            # WiFi 连接
+    │   ├── PrivacyConsent.tsx       # 隐私协议
+    │   └── AccountSetup.tsx         # 账号登录
+    ├── Launcher/
+    │   ├── LauncherHome.tsx         # 桌面主容器
+    │   ├── StatusBar.tsx            # 状态栏
+    │   ├── SearchBar.tsx            # 搜索栏
+    │   ├── CategoryBar.tsx          # 分类筛选栏
+    │   ├── AppGrid.tsx              # 应用网格
+    │   ├── AppCard.tsx              # 应用卡片（含兼容性徽标）
+    │   └── BottomNav.tsx            # 底部导航
+    ├── AppViewer/
+    │   └── AppViewer.tsx            # 应用运行容器（iframe / Mock 预览）
+    ├── Settings/
+    │   └── SettingsPage.tsx         # 设置页面
+    └── Debug/
+        ├── BridgeConsole.tsx        # Bridge 调用日志面板
+        └── DeviceSpecs.tsx          # 硬件参数表
 ```
 
 ## 快速开始
@@ -182,9 +206,15 @@ npm run preview
 | snap-surface | `#1e293b` | 卡片背景 |
 | snap-text | `#e2e8f0` | 主文字 |
 
-## 当前状态
+## 当前状态与待开发项
 
-这是一个**早期交互原型**，核心框架和 UI 外壳已完成。应用内容、系统级功能（安装/卸载、通知、持久化等）尚待开发。
+这是一个**早期交互原型**，核心框架和 UI 外壳已完成。以下功能尚待开发：
+
+- [ ] 应用内容：17/18 款应用仅为 Mock 预览，需接入真实部署地址
+- [ ] "已安装" Tab：UI 已就位，缺少安装/卸载逻辑和列表筛选
+- [ ] 通知系统
+- [ ] 数据持久化（当前 Storage 为内存级，刷新即丢失）
+- [ ] 应用商店功能（安装、卸载、更新）
 
 ## License
 
